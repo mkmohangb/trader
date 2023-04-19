@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %} Trades {% endblock %}</h1>
+    <hr>
+    {% for trade in trade_list %}
+        <h2> {{ trade['instrument'] }} </h2>
+        <p> {{ trade['stoploss'] }} </p>
+        <p> {{ trade['product'] }} </p>
+        <p> {{ trade['expiry'] }} </p>
+        <h4> {{ trade['lots'] }} </h4>
+        <hr>
+    {% endfor %}
+{% endblock %}

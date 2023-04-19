@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h1>{% block title %} Initiate a New Trade {% endblock %}</h1>
+    <h4>NIFTY SPOT: {{ spot }}</h4>
+
+    <form method="POST" action="/">
+        {{ form.csrf_token }}
+        <p>
+            {{ form.instrument.label }}
+            {{ form.instrument() }}
+        </p>
+
+        {% if form.instrument.errors %}
+            <ul class="errors">
+                {% for error in form.instrument.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+
+        <p>
+            {{ form.product.label }}
+            {{ form.product() }}
+        </p>
+
+        {% if form.product.errors %}
+            <ul class="errors">
+                {% for error in form.product.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+         {% endif %}
+
+        <p>
+            {{ form.expiry.label }}
+            {{ form.expiry() }}
+        </p>
+
+        {% if form.expiry.errors %}
+            <ul class="errors">
+                {% for error in form.expiry.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <p>
+            {{ form.lots.label }}
+            {{ form.lots() }}
+        </p>
+
+        {% if form.lots.errors %}
+            <ul class="errors">
+                {% for error in form.lots.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <p>
+            {{ form.stoploss.label }}
+            {{ form.stoploss() }}
+        </p>
+
+        {% if form.stoploss.errors %}
+            <ul class="errors">
+                {% for error in form.stoploss.errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+        <p>
+            <input type="submit" value="Add">
+        </p>
+    </form>
+
+{% endblock %}
