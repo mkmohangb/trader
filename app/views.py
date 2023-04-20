@@ -1,13 +1,15 @@
 from datetime import datetime
-from flask import Flask, render_template, redirect, url_for, session, request
+from flask import Blueprint
+from flask import render_template, redirect, url_for, session, request
 import json
 from kiteconnect import KiteConnect
 import os
 from pymongo import MongoClient
-from forms import TradeForm
+from . import forms
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24)
+#app = Flask(__name__)
+#app.config['SECRET_KEY'] = os.urandom(24)
+bp = Blueprint('main', __name__, url_prefix='')
 
 client = MongoClient('localhost', 27017)
 db = client.straddle_db
@@ -50,7 +52,8 @@ def is_token_valid():
     return valid
 
 
-@app.route('/login')
+#@app.route('/login')
+@bp.get('/login')
 def login():
     print("redirected from zerodha")
     request_token = request.args.get("request_token")
@@ -62,12 +65,13 @@ def login():
         with open(TOKEN_PATH, "w") as f:
             json.dump({"access_token": data["access_token"]}, f)
 
-    return redirect(url_for('index'))
+    return redirect(url_for('main.index'))
 
 
-@app.route('/', methods=['GET', 'POST'])
+#@app.route('/', methods=['GET', 'POST'])
+@bp.route('/', methods=['GET', 'POST'])
 def index():
-    form = TradeForm()
+    form = forms.TradeForm()
     if form.validate_on_submit():
         trades.insert_one({
             'instrument': form.instrument.data,
@@ -76,7 +80,7 @@ def index():
             'product': form.product.data,
             'expiry': form.expiry.data,
         })
-        return redirect(url_for('get_trades'))
+        return redirect(url_for('main.get_trades'))
 
     if is_token_valid():
         kite = get_kite_client()
@@ -87,12 +91,12 @@ def index():
         return """<a href="{LOGIN_URL}"><h1>Login</h1></a>""".format(LOGIN_URL=LOGIN_URL)
 
 
-
-@app.route('/trades/')
+#@app.route('/trades/')
+@bp.route('/trades/')
 def get_trades():
     trade_list = trades.find()
     return render_template('trades.html', trade_list=trade_list)
 
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5010)
+#if __name__ == "__main__":
+#    app.run(debug=True, port=5010)
