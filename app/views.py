@@ -6,6 +6,7 @@ from kiteconnect import KiteConnect
 import os
 from pymongo import MongoClient
 from . import forms
+from . import tasks
 
 #app = Flask(__name__)
 #app.config['SECRET_KEY'] = os.urandom(24)
@@ -86,6 +87,8 @@ def index():
         kite = get_kite_client()
         kite.set_access_token(get_token())
         price = kite.ltp('NSE:NIFTY 50')['NSE:NIFTY 50']['last_price']
+        result = tasks.add.delay(4, 5)
+        print("result of add is ", result.get())
         return render_template('index.html', form=form, spot=price)
     else:
         return """<a href="{LOGIN_URL}"><h1>Login</h1></a>""".format(LOGIN_URL=LOGIN_URL)
