@@ -4,17 +4,12 @@ from flask import render_template, redirect, url_for, session, request
 import json
 from kiteconnect import KiteConnect
 import os
-from pymongo import MongoClient
 from . import forms
 from . import tasks
+from . import storage as sg
 
-#app = Flask(__name__)
-#app.config['SECRET_KEY'] = os.urandom(24)
 bp = Blueprint('main', __name__, url_prefix='')
 
-client = MongoClient('localhost', 27017)
-db = client.straddle_db
-trades = db.trades
 TOKEN_PATH = "token.json"
 BASE_URL = "https://kite.zerodha.com/connect/login"
 KITE_API_KEY = os.environ["kite_api_key"]
@@ -53,10 +48,8 @@ def is_token_valid():
     return valid
 
 
-#@app.route('/login')
 @bp.get('/login')
 def login():
-    print("redirected from zerodha")
     request_token = request.args.get("request_token")
     if request_token:
         kite = get_kite_client()
@@ -69,12 +62,11 @@ def login():
     return redirect(url_for('main.index'))
 
 
-#@app.route('/', methods=['GET', 'POST'])
 @bp.route('/', methods=['GET', 'POST'])
 def index():
     form = forms.TradeForm()
     if form.validate_on_submit():
-        trades.insert_one({
+        sg.trades.insert_one({
             'instrument': form.instrument.data,
             'lots': form.lots.data,
             'stoploss': form.stoploss.data,
@@ -88,18 +80,13 @@ def index():
         kite.set_access_token(get_token())
         price = kite.ltp('NSE:NIFTY 50')['NSE:NIFTY 50']['last_price']
         result = tasks.add.delay(4, 5)
-        print("result of add is ", result.get())
+        print(result.get(timeout=2))
         return render_template('index.html', form=form, spot=price)
     else:
         return """<a href="{LOGIN_URL}"><h1>Login</h1></a>""".format(LOGIN_URL=LOGIN_URL)
 
 
-#@app.route('/trades/')
 @bp.route('/trades/')
 def get_trades():
-    trade_list = trades.find()
+    trade_list = sg.trades.find()
     return render_template('trades.html', trade_list=trade_list)
-
-
-#if __name__ == "__main__":
-#    app.run(debug=True, port=5010)
