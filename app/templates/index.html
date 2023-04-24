@@ -2,7 +2,8 @@
 
 {% block content %}
     <h1>{% block title %} Initiate an ATM Straddle Trade {% endblock %}</h1>
-    <h4>NIFTY SPOT: {{ spot }}</h4>
+    <h4>NIFTY SPOT: {{ spot[0] }}</h4>
+    <h4>BANKNIFTY SPOT: {{ spot[1] }}</h4>
 
     <form method="POST" action="/">
         {{ form.csrf_token }}
@@ -72,7 +73,7 @@
             </ul>
         {% endif %}
         <p>
-            <input type="submit" value="Add">
+            <input type="submit" value="Submit">
         </p>
     </form>
 

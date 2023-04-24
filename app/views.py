@@ -85,10 +85,13 @@ def index():
     if is_token_valid():
         kite = get_kite_client()
         kite.set_access_token(get_token())
-        price = kite.ltp('NSE:NIFTY 50')['NSE:NIFTY 50']['last_price']
+        nf_price = kite.ltp('NSE:NIFTY 50')['NSE:NIFTY 50']['last_price']
+        bnf_price = kite.ltp('NSE:NIFTY BANK')['NSE:NIFTY BANK']['last_price']
+        print(bnf_price)
         result = tasks.add.delay(4, 5)
         print(result.get(timeout=2))
-        return render_template('index.html', form=form, spot=price)
+        return render_template('index.html', form=form,
+                               spot=[nf_price, bnf_price])
     else:
         return """<a href="{LOGIN_URL}"><h1>Login</h1></a>""".format(LOGIN_URL=LOGIN_URL)
 
