@@ -1,3 +1,4 @@
+from celery.result import AsyncResult
 from datetime import datetime
 from flask import Blueprint
 from flask import render_template, redirect, url_for, session, request
@@ -66,13 +67,19 @@ def login():
 def index():
     form = forms.TradeForm()
     if form.validate_on_submit():
-        sg.trades.insert_one({
+        order_info = {
             'instrument': form.instrument.data,
             'lots': form.lots.data,
             'stoploss': form.stoploss.data,
             'product': form.product.data,
             'expiry': form.expiry.data,
-        })
+            }
+        result = tasks.initiate_trade.delay(order_info)
+        print("initiate trade result is ", result, type(result), result.id,
+              type(result.id))
+        order_info.update({'task_id': result.id})
+        # insert method below adds "_id" attribute to order_info
+        sg.trades.insert_one(order_info)
         return redirect(url_for('main.get_trades'))
 
     if is_token_valid():
@@ -88,5 +95,9 @@ def index():
 
 @bp.route('/trades/')
 def get_trades():
-    trade_list = sg.trades.find()
+    trade_list = list(sg.trades.find())
+    for trade in trade_list:
+        result = AsyncResult(trade['task_id'])
+        trade['status'] = result.state
+        trade['result'] = result.get(timeout=1)
     return render_template('trades.html', trade_list=trade_list)
