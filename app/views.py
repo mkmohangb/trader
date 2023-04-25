@@ -74,7 +74,7 @@ def index():
             'product': form.product.data,
             'expiry': form.expiry.data,
             }
-        result = tasks.initiate_trade.delay(order_info)
+        result = tasks.monitor_skew.delay(order_info)
         print("initiate trade result is ", result, type(result), result.id,
               type(result.id))
         order_info.update({'task_id': result.id})
@@ -88,8 +88,8 @@ def index():
         nf_price = kite.ltp('NSE:NIFTY 50')['NSE:NIFTY 50']['last_price']
         bnf_price = kite.ltp('NSE:NIFTY BANK')['NSE:NIFTY BANK']['last_price']
         print(bnf_price)
-        result = tasks.add.delay(4, 5)
-        print(result.get(timeout=2))
+        #result = tasks.add.delay(4, 5)
+        #print(result.get(timeout=2))
         return render_template('index.html', form=form,
                                spot=[nf_price, bnf_price])
     else:
@@ -102,5 +102,6 @@ def get_trades():
     for trade in trade_list:
         result = AsyncResult(trade['task_id'])
         trade['status'] = result.state
-        trade['result'] = result.get(timeout=1)
+        #trade['result'] = result.get(timeout=1)
+        trade.pop("_id")
     return render_template('trades.html', trade_list=trade_list)

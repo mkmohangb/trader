@@ -21,7 +21,7 @@ def getAtmInstruments(ws, name, spot):
     else:
         strikes = [(quotient + 1) * 100, (quotient + 1) * 100 - 50 * factor]
 
-    logging.info(strikes)
+    #logging.info(strikes)
     trades = filter(lambda ins: ins["strike"] in strikes and 
                                    ins["name"] == name, ws.instruments)
     #print(list(trades))
@@ -42,7 +42,7 @@ def update_strike_list(ws, instruments):
         if x["instrument_token"] not in strike_list:
             strike_list.append(x["instrument_token"])
         new_tokens.append(x["instrument_token"])
-    print(ws.strike_list)
+    #print(ws.strike_list)
     return new_tokens
 
 
@@ -50,26 +50,27 @@ def place_order(ws, strike):
     trades = list(filter(lambda ins: ins["instrument_token"] in strike,
                     ws.instruments))
     print(trades[0]["tradingsymbol"], trades[1]["tradingsymbol"])
-    try:
-        ce_order_id = ws.kite.place_order(variety="regular",
-                                          exchange="NFO",
-                                          tradingsymbol=trades[0]["tradingsymbol"],
-                                          transaction_type="SELL",
-                                          quantity=50,
-                                          order_type="MARKET",
-                                          product="MIS")
-        print("ce order id is ", ce_order_id)
-        pe_order_id = ws.kite.place_order(variety="regular",
-                                          exchange="NFO",
-                                          tradingsymbol=trades[1]["tradingsymbol"],
-                                          transaction_type="SELL",
-                                          quantity=50,
-                                          order_type="MARKET",
-                                          product="MIS")
-        print("pe order id is ", pe_order_id)
-    except Exception as e:
-        print("order placement failed:", e)
-
+    ws.callback(trades[0]["tradingsymbol"], trades[1]["tradingsymbol"])
+#    try:
+#        ce_order_id = ws.kite.place_order(variety="regular",
+#                                          exchange="NFO",
+#                                          tradingsymbol=trades[0]["tradingsymbol"],
+#                                          transaction_type="SELL",
+#                                          quantity=50,
+#                                          order_type="MARKET",
+#                                          product="MIS")
+#        print("ce order id is ", ce_order_id)
+#        pe_order_id = ws.kite.place_order(variety="regular",
+#                                          exchange="NFO",
+#                                          tradingsymbol=trades[1]["tradingsymbol"],
+#                                          transaction_type="SELL",
+#                                          quantity=50,
+#                                          order_type="MARKET",
+#                                          product="MIS")
+#        print("pe order id is ", pe_order_id)
+#    except Exception as e:
+#        print("order placement failed:", e)
+#
 
 # Callback for tick reception.
 def on_ticks(ws, ticks):
@@ -90,10 +91,11 @@ def on_ticks(ws, ticks):
                 print('premium is ', strike[0]["last_price"] +
                       strike[1]["last_price"])
                 skew = get_skew(strike[0]["last_price"], strike[1]["last_price"])
-                if skew < 30:
+                if skew < 50:
                     print("place order with strike price: " + key)
                     if ws.order_placed == False:
                         ws.order_placed = True
+                        ws.unsubscribe(tokens)
                         place_order(ws, nf_strike_list[key])
                         print("order placed")
 
@@ -126,7 +128,7 @@ def on_noreconnect(ws):
     logging.info("Reconnect failed.")
 
 
-def start_ticker():
+def start_ticker(callback):
 
     kws = KiteTicker(os.environ["kite_api_key"], os.environ["kite_access_token"])
     kws.on_ticks = on_ticks
@@ -142,6 +144,8 @@ def start_ticker():
     kws.kite = KiteConnect(api_key=os.environ["kite_api_key"],
                            access_token=os.environ["kite_access_token"])
 
+    kws.callback = callback
     kws.connect(threaded=True)
 
     logging.info("kws connect complete")
+    return kws

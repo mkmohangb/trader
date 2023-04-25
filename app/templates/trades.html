@@ -8,8 +8,25 @@
         <p> {{ trade['stoploss'] }} </p>
         <p> {{ trade['product'] }} </p>
         <p> {{ trade['expiry'] }} </p>
-        <h4> {{ trade['lots'] }} </h4>
-        <h4> {{ trade['result'] }} </h4>
+        <p> {{ trade['lots'] }} </p>
+        <p>Status: <span id={{trade['task_id']}}></span></p>
         <hr>
     {% endfor %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM content loaded");
+        console.log({{ trade_list|tojson }});
+        for (const trade of {{ trade_list|tojson }}) {
+            document.getElementById(trade.task_id).innerHTML = trade.status;
+        }
+        const poll = () => {
+            for (const trade of {{ trade_list|tojson }}) {
+                document.getElementById(trade.task_id).innerHTML = "FAILURE";
+            }
+            setTimeout(poll, 1000);
+        }
+        poll();
+    });
+</script>
 {% endblock %}
+
