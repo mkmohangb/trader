@@ -17,11 +17,21 @@
         console.log("DOM content loaded");
         console.log({{ trade_list|tojson }});
         for (const trade of {{ trade_list|tojson }}) {
-            document.getElementById(trade.task_id).innerHTML = trade.status;
+            fetch(`/result/${trade.task_id}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    document.getElementById(trade.task_id).innerHTML = data["value"];
+                });
         }
         const poll = () => {
             for (const trade of {{ trade_list|tojson }}) {
-                document.getElementById(trade.task_id).innerHTML = "FAILURE";
+                fetch(`/result/${trade.task_id}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log(data);
+                    document.getElementById(trade.task_id).innerHTML = data["value"];
+                });
             }
             setTimeout(poll, 1000);
         }

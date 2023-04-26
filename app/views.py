@@ -73,13 +73,15 @@ def index():
             'stoploss': form.stoploss.data,
             'product': form.product.data,
             'expiry': form.expiry.data,
+            'date': str(datetime.now())
             }
-        result = tasks.monitor_skew.delay(order_info)
+        sg.trades.insert_one(order_info)
+        oid = order_info["_id"]
+        order_info["_id"] = str(order_info["_id"])
+        result = tasks.initiate_trade(order_info)
         print("initiate trade result is ", result, type(result), result.id,
               type(result.id))
-        order_info.update({'task_id': result.id})
-        # insert method below adds "_id" attribute to order_info
-        sg.trades.insert_one(order_info)
+        sg.trades.update_one({'_id': oid}, {"$set": {'task_id': result.id}})
         return redirect(url_for('main.get_trades'))
 
     if is_token_valid():
@@ -87,9 +89,6 @@ def index():
         kite.set_access_token(get_token())
         nf_price = kite.ltp('NSE:NIFTY 50')['NSE:NIFTY 50']['last_price']
         bnf_price = kite.ltp('NSE:NIFTY BANK')['NSE:NIFTY BANK']['last_price']
-        print(bnf_price)
-        #result = tasks.add.delay(4, 5)
-        #print(result.get(timeout=2))
         return render_template('index.html', form=form,
                                spot=[nf_price, bnf_price])
     else:
@@ -100,8 +99,20 @@ def index():
 def get_trades():
     trade_list = list(sg.trades.find())
     for trade in trade_list:
-        result = AsyncResult(trade['task_id'])
-        trade['status'] = result.state
-        #trade['result'] = result.get(timeout=1)
         trade.pop("_id")
     return render_template('trades.html', trade_list=trade_list)
+
+
+def _get_status_from_db(id):
+    return sg.trades.find_one({"task_id": id})["status"]
+
+
+@bp.route('/result/<id>')
+def result(id):
+    result = AsyncResult(id)
+    ready = result.ready()
+    return {
+        "ready": ready,
+        "successful": result.successful() if ready else None,
+        "value": result.get() if ready else _get_status_from_db(id)
+    }

@@ -1,9 +1,10 @@
 from collections import defaultdict
 from datetime import datetime as dt
 import json
-from kiteconnect import KiteTicker, KiteConnect
+from kiteconnect import KiteTicker
 import logging
 import os
+from functools import reduce
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -50,32 +51,24 @@ def place_order(ws, strike):
     trades = list(filter(lambda ins: ins["instrument_token"] in strike,
                     ws.instruments))
     print(trades[0]["tradingsymbol"], trades[1]["tradingsymbol"])
-    ws.callback(trades[0]["tradingsymbol"], trades[1]["tradingsymbol"])
-#    try:
-#        ce_order_id = ws.kite.place_order(variety="regular",
-#                                          exchange="NFO",
-#                                          tradingsymbol=trades[0]["tradingsymbol"],
-#                                          transaction_type="SELL",
-#                                          quantity=50,
-#                                          order_type="MARKET",
-#                                          product="MIS")
-#        print("ce order id is ", ce_order_id)
-#        pe_order_id = ws.kite.place_order(variety="regular",
-#                                          exchange="NFO",
-#                                          tradingsymbol=trades[1]["tradingsymbol"],
-#                                          transaction_type="SELL",
-#                                          quantity=50,
-#                                          order_type="MARKET",
-#                                          product="MIS")
-#        print("pe order id is ", pe_order_id)
-#    except Exception as e:
-#        print("order placement failed:", e)
-#
+    ws.callback(trades)
 
 # Callback for tick reception.
 def on_ticks(ws, ticks):
     logging.info(list(map(lambda x: str(x["instrument_token"]) + ": " +
                           str(x["last_price"]), ticks)))
+    if ws.stoploss > 0:
+        if len(ticks) == 2:
+            premium = reduce(lambda x, y: x + y, map(lambda x: x["last_price"], ticks))
+            if premium > 75:
+                print("stoploss triggered")
+                ws.stoploss = 0
+                ws.unsubscribe(tokens)
+                trades = list(filter(lambda ins: ins["instrument_token"] in tokens,
+                              ws.instruments))
+                ws.callback(trades)
+        return
+
     if len(ticks) == 1:
         instruments = getAtmInstruments(ws, "NIFTY", ticks[0]["last_price"])
         tokens.extend(update_strike_list(ws, instruments))
@@ -91,7 +84,7 @@ def on_ticks(ws, ticks):
                 print('premium is ', strike[0]["last_price"] +
                       strike[1]["last_price"])
                 skew = get_skew(strike[0]["last_price"], strike[1]["last_price"])
-                if skew < 50:
+                if skew < 100:
                     print("place order with strike price: " + key)
                     if ws.order_placed == False:
                         ws.order_placed = True
@@ -128,7 +121,7 @@ def on_noreconnect(ws):
     logging.info("Reconnect failed.")
 
 
-def start_ticker(callback):
+def start_ticker(callback, stoploss = 0):
 
     kws = KiteTicker(os.environ["kite_api_key"], os.environ["kite_access_token"])
     kws.on_ticks = on_ticks
@@ -141,10 +134,12 @@ def start_ticker(callback):
     kws.strike_list = {"NIFTY": defaultdict(list),
                        "BANKNIFTY": defaultdict(list)}
     kws.order_placed = False
-    kws.kite = KiteConnect(api_key=os.environ["kite_api_key"],
-                           access_token=os.environ["kite_access_token"])
 
     kws.callback = callback
+    kws.stoploss = stoploss
+    if stoploss > 0:
+        tokens.clear()
+        tokens.extend([13918210, 13918466])
     kws.connect(threaded=True)
 
     logging.info("kws connect complete")
